@@ -20,6 +20,8 @@
   <p>Upscaled Image:</p>
   <div id="upscaled-image-container"></div>
 
+  <!-- Load TensorFlow.js -->
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest"></script>
   <!-- Load the 2x model -->
   <script src="https://cdn.jsdelivr.net/npm/@upscalerjs/esrgan-thick@latest/dist/umd/2x.min.js"></script>
   <!-- Load UpscalerJS -->
@@ -33,7 +35,7 @@
         reader.onload = function(e) {
           const img = document.getElementById('original-image');
           img.src = e.target.result;
-          
+
           // Create an instance of Upscaler with the specified model
           const upscaler = new Upscaler({
             model: ESRGANThick2x, // Referencing the model by its global name
@@ -48,6 +50,7 @@
               container.appendChild(upscaledImage);
             }).catch(error => {
               console.error('Error upscaling the image:', error);
+              alert('Error upscaling the image: ' + error.message);
             });
           };
         };
