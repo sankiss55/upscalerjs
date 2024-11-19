@@ -1,55 +1,58 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>UpscalerJS Camera</title>
+  <title>UpscalerJS Example</title>
   <style>
-    video, canvas {
+    #original-image, #upscaled-image {
+      max-width: 100%;
       display: block;
-      margin: 0 auto;
+      margin: 10px 0;
     }
   </style>
-  <!-- Incluir TensorFlow.js -->
-  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
-  <!-- Incluir UpscalerJS -->
-  <script src="https://cdn.jsdelivr.net/npm/upscaler"></script>
-  <!-- Incluir el modelo esrgan-thick/4x -->
-  <script src="https://cdn.jsdelivr.net/npm/@upscalerjs/esrgan-thick@latest/dist/4x.min.js"></script>
 </head>
 <body>
-  <video id="video" width="320" height="240" autoplay></video>
-  <button id="capture">Tomar Foto</button>
-  <canvas id="canvas" width="320" height="240"></canvas>
-  <script>
-    const video = document.getElementById('video');
-    const canvas = document.getElementById('canvas');
-    const captureButton = document.getElementById('capture');
-    const upscaler = new Upscaler({ model: window.ESRGANx4 });
+  <h1>UpscalerJS Example</h1>
+  <input type="file" id="image-input" accept="image/*">
+  <p>Original Image:</p>
+  <img id="original-image" alt="Original Image">
+  <p>Upscaled Image:</p>
+  <div id="upscaled-image-container"></div>
 
-    // Acceder a la cámara frontal
-    navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } })
-      .then(stream => {
-        video.srcObject = stream;
-      })
-      .catch(err => {
-        console.error("Error al acceder a la cámara: ", err);
-      });
+  <!-- Load the 2x model -->
+  <script src="https://cdn.jsdelivr.net/npm/@upscalerjs/esrgan-thick@latest/dist/umd/2x.min.js"></script>
+  <!-- Load UpscalerJS -->
+  <script src="https://cdn.jsdelivr.net/npm/upscaler@latest/dist/browser/umd/upscaler.min.js"></script>
 
-    // Capturar imagen y mejorarla
-    captureButton.addEventListener('click', async () => {
-      const context = canvas.getContext('2d');
-      canvas.width = video.videoWidth;
-      canvas.height = video.videoHeight;
-      context.drawImage(video, 0, 0, canvas.width, canvas.height);
+  <script type="text/javascript">
+    document.getElementById('image-input').addEventListener('change', function(event) {
+      const file = event.target.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+          const img = document.getElementById('original-image');
+          img.src = e.target.result;
+          
+          // Create an instance of Upscaler with the specified model
+          const upscaler = new Upscaler({
+            model: ESRGANThick2x, // Referencing the model by its global name
+          });
 
-      const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
-      const upscaledImageData = await upscaler.upscale(imageData);
-
-      canvas.width = upscaledImageData.width;
-      canvas.height = upscaledImageData.height;
-      context.putImageData(upscaledImageData, 0, 0);
+          img.onload = function() {
+            // Upscale the image once it has loaded
+            upscaler.upscale(img).then(upscaledImage => {
+              // Display the upscaled image
+              const container = document.getElementById('upscaled-image-container');
+              container.innerHTML = ''; // Clear previous upscaled image
+              container.appendChild(upscaledImage);
+            }).catch(error => {
+              console.error('Error upscaling the image:', error);
+            });
+          };
+        };
+        reader.readAsDataURL(file);
+      }
     });
   </script>
 </body>
