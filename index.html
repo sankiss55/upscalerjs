@@ -1,83 +1,50 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="es">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>UpscalerJS Example</title>
-  <style>
-    #original-image, #upscaled-image {
-      max-width: 100%;
-      display: block;
-      margin: 10px 0;
-    }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Upscaler de Imágenes con Waifu2x</title>
 </head>
 <body>
-  <h1>UpscalerJS Example</h1>
-  <input type="file" id="image-input" accept="image/*">
-  <p>Original Image:</p>
-  <img id="original-image" alt="Original Image">
-  <p>Upscaled Image:</p>
-  <div id="upscaled-image-container"></div>
+    <h1>Mejorar la resolución de una imagen con Waifu2x</h1>
 
-  <!-- Load TensorFlow.js -->
-  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest"></script>
-  <!-- Load the 2x model -->
-  <script src="https://cdn.jsdelivr.net/npm/@upscalerjs/esrgan-thick@latest/dist/umd/2x.min.js"></script>
-  <!-- Load UpscalerJS -->
-  <script src="https://cdn.jsdelivr.net/npm/upscaler@latest/dist/browser/umd/upscaler.min.js"></script>
+    <input type="file" id="imageInput" accept="image/*" />
+    <br><br>
+    <canvas id="outputCanvas"></canvas>
 
-  <script type="text/javascript">
-    document.getElementById('image-input').addEventListener('change', function(event) {
-      const file = event.target.files[0];
-      if (file) {
-        const reader = new FileReader();
-        reader.onload = function(e) {
-          const img = document.getElementById('original-image');
-          img.src = e.target.result;
+    <script src="https://cdn.jsdelivr.net/npm/waifu2x.js@1.0.0/dist/waifu2x.min.js"></script>
+    <script>
+        document.getElementById('imageInput').addEventListener('change', function(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const img = new Image();
+                    img.onload = function() {
+                        try {
+                            // Escalar la imagen usando Waifu2x.js
+                            const canvas = document.getElementById('outputCanvas');
+                            canvas.width = img.width * 2;  // Escalar por 2
+                            canvas.height = img.height * 2;
 
-          img.onload = function() {
-            const maxTextureSize = 4096; // Maximum texture size for WebGL
-
-            // Create an off-screen canvas for resizing the image
-            const canvas = document.createElement('canvas');
-            const ctx = canvas.getContext('2d');
-
-            // Check if the image exceeds the maximum texture size
-            if (img.width > maxTextureSize || img.height > maxTextureSize) {
-              const scaleFactor = Math.min(maxTextureSize / img.width, maxTextureSize / img.height);
-              canvas.width = img.width * scaleFactor;
-              canvas.height = img.height * scaleFactor;
-              ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-            } else {
-              canvas.width = img.width;
-              canvas.height = img.height;
-              ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                            // Aplica el upscaling usando Waifu2x
+                            const context = canvas.getContext('2d');
+                            waifu2x.upscale(img, { noise: 1, scale: 2 })
+                                .then(upscaledCanvas => {
+                                    context.drawImage(upscaledCanvas, 0, 0);
+                                })
+                                .catch(error => {
+                                    alert('Error al procesar la imagen: ' + error.message);
+                                });
+                        } catch (error) {
+                            alert('Error al procesar la imagen: ' + error.message);
+                        }
+                    };
+                    img.src = e.target.result;
+                };
+                reader.readAsDataURL(file);
             }
-
-            const upscaledImgElement = document.createElement('img');
-            upscaledImgElement.src = canvas.toDataURL();
-
-            // Create an instance of Upscaler with the specified model
-            const upscaler = new Upscaler({
-              model: ESRGANThick2x, // Referencing the model by its global name
-            });
-
-            // Upscale the resized image
-            upscaler.upscale(upscaledImgElement).then(upscaledImage => {
-              // Display the upscaled image
-              const container = document.getElementById('upscaled-image-container');
-              container.innerHTML = ''; // Clear previous upscaled image
-              container.appendChild(upscaledImage);
-            }).catch(error => {
-              console.error('Error upscaling the image:', error);
-              alert('Error upscaling the image: ' + error.message);
-            });
-          };
-        };
-        reader.readAsDataURL(file);
-      }
-    });
-  </script>
+        });
+    </script>
 </body>
 </html>
