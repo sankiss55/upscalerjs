@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>UpscalerJS Example</title>
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@upscalerjs/default-model@latest/dist/umd/index.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/upscaler@latest/dist/browser/umd/upscaler.min.js"></script>
+</head>
+<body>
+  <h1>UpscalerJS Example</h1>
+  <input type="file" id="inputImage" accept="image/*" />
+  <canvas id="outputCanvas"></canvas>
+
+  <script>
+    const inputImage = document.getElementById("inputImage");
+    const outputCanvas = document.getElementById("outputCanvas");
+    
+    // Initialize the upscaler
+    const upscaler = new Upscaler({
+      model: DefaultUpscalerJSModel,  // Using the default model
+    });
+
+    // When an image is selected
+    inputImage.addEventListener("change", function(event) {
+      const file = event.target.files[0];
+      const reader = new FileReader();
+
+      reader.onload = function(e) {
+        const img = new Image();
+        img.onload = function() {
+          // Upscale the image
+          upscaler.upscale(img).then(result => {
+            const ctx = outputCanvas.getContext("2d");
+            outputCanvas.width = result.width;
+            outputCanvas.height = result.height;
+            ctx.drawImage(result, 0, 0);
+          });
+        };
+        img.src = e.target.result;
+      };
+      
+      reader.readAsDataURL(file);
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>UpscalerJS Example</title>
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@upscalerjs/default-model@latest/dist/umd/index.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/upscaler@latest/dist/browser/umd/upscaler.min.js"></script>
+</head>
+<body>
+  <h1>UpscalerJS Example</h1>
+  <video id="video" width="640" height="480" autoplay></video>
+  <canvas id="outputCanvas"></canvas>
+
+  <script>
+    const video = document.getElementById("video");
+    const outputCanvas = document.getElementById("outputCanvas");
+
+    // Inicializar la cámara
+    navigator.mediaDevices.getUserMedia({ video: true })
+      .then(stream => {
+        video.srcObject = stream;
+      })
+      .catch(error => {
+        console.error("Error accessing the camera", error);
+      });
+
+    // Inicializar el upscaler
+    const upscaler = new Upscaler({
+      model: DefaultUpscalerJSModel,  // Usar el modelo por defecto
+    });
+
+    // Función para capturar una foto después de 5 segundos
+    function takePhoto() {
+      setTimeout(() => {
+        // Crear un canvas para capturar la imagen del video
+        const context = outputCanvas.getContext("2d");
+        context.drawImage(video, 0, 0, outputCanvas.width, outputCanvas.height);
+
+        // Obtener la imagen capturada
+        const img = outputCanvas;
+
+        // Realizar el upscale de la imagen
+        upscaler.upscale(img).then(result => {
+          const ctx = outputCanvas.getContext("2d");
+          outputCanvas.width = result.width;
+          outputCanvas.height = result.height;
+          ctx.drawImage(result, 0, 0);
+        });
+      }, 5000); // Esperar 5 segundos antes de tomar la foto
+    }
+
+    // Llamar a la función para tomar la foto
+    takePhoto();
+  </script>
+</body>
+</html>
