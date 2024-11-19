@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Waifu - Mejora Avanzada de Imagen</title>
+    <title>Waifu - Mejora Avanzada</title>
     <script async src="https://docs.opencv.org/4.x/opencv.js" onload="onOpenCvReady()" onerror="alert('Error al cargar OpenCV.js')"></script>
     <style>
         body {
@@ -18,8 +18,8 @@
     </style>
 </head>
 <body>
-    <h1>/waifu - Mejora Avanzada de Imagen</h1>
-    <p>Sube una imagen para quitar el desenfoque y mejorar la nitidez.</p>
+    <h1>/waifu - Mejora de Nitidez</h1>
+    <p>Sube una imagen para eliminar el desenfoque y aumentar la nitidez.</p>
     <input type="file" id="imageInput" accept="image/*">
     <canvas id="outputCanvas"></canvas>
 
@@ -40,38 +40,32 @@
                 reader.onload = function (e) {
                     let img = new Image();
                     img.onload = function () {
+                        // Ajustar canvas al tamaño de la imagen cargada
                         outputCanvas.width = img.width;
                         outputCanvas.height = img.height;
                         ctx.drawImage(img, 0, 0);
 
                         try {
+                            // Leer la imagen cargada
                             let src = cv.imread(outputCanvas);
                             let dst = new cv.Mat();
 
-                            // Método 1: Realce Laplaciano
-                            cv.cvtColor(src, src, cv.COLOR_RGBA2GRAY, 0); // Convertir a escala de grises
-                            let laplacian = new cv.Mat();
-                            cv.Laplacian(src, laplacian, cv.CV_16S, 3, 1, 0, cv.BORDER_DEFAULT);
-                            cv.convertScaleAbs(laplacian, laplacian); // Escalar valores absolutos
-                            
-                            // Método 2: Agregar nitidez
-                            let sharp = new cv.Mat();
+                            // Kernel de enfoque (agresivo para quitar desenfoque)
                             let kernel = cv.matFromArray(3, 3, cv.CV_32F, [
                                 -1, -1, -1,
                                 -1,  9, -1,
                                 -1, -1, -1
                             ]);
-                            cv.filter2D(laplacian, sharp, cv.CV_8U, kernel);
 
-                            // Combinar y mostrar
-                            cv.addWeighted(src, 0.5, sharp, 0.5, 0, dst);
+                            // Aplicar filtro de enfoque
+                            cv.filter2D(src, dst, cv.CV_8U, kernel);
+
+                            // Mostrar imagen procesada
                             cv.imshow(outputCanvas, dst);
 
                             // Liberar memoria
                             src.delete();
                             dst.delete();
-                            laplacian.delete();
-                            sharp.delete();
                             kernel.delete();
                         } catch (error) {
                             console.error(error);
