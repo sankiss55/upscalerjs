@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Waifu - Mejora Avanzada</title>
+    <title>Waifu - Super Resolución</title>
     <script async src="https://docs.opencv.org/4.x/opencv.js" onload="onOpenCvReady()" onerror="alert('Error al cargar OpenCV.js')"></script>
     <style>
         body {
@@ -18,8 +18,8 @@
     </style>
 </head>
 <body>
-    <h1>/waifu - Mejora de Nitidez</h1>
-    <p>Sube una imagen para eliminar el desenfoque y aumentar la nitidez.</p>
+    <h1>/waifu - Super Resolución</h1>
+    <p>Sube una imagen para maximizar la nitidez y claridad.</p>
     <input type="file" id="imageInput" accept="image/*">
     <canvas id="outputCanvas"></canvas>
 
@@ -40,33 +40,44 @@
                 reader.onload = function (e) {
                     let img = new Image();
                     img.onload = function () {
-                        // Ajustar canvas al tamaño de la imagen cargada
                         outputCanvas.width = img.width;
                         outputCanvas.height = img.height;
                         ctx.drawImage(img, 0, 0);
 
                         try {
-                            // Leer la imagen cargada
                             let src = cv.imread(outputCanvas);
                             let dst = new cv.Mat();
 
-                            // Kernel de enfoque (agresivo para quitar desenfoque)
+                            // 1. Reducir ruido con filtro bilateral (preserva bordes)
+                            let temp = new cv.Mat();
+                            cv.bilateralFilter(src, temp, 15, 75, 75);
+
+                            // 2. Aplicar un filtro de enfoque avanzado
                             let kernel = cv.matFromArray(3, 3, cv.CV_32F, [
                                 -1, -1, -1,
                                 -1,  9, -1,
                                 -1, -1, -1
                             ]);
+                            cv.filter2D(temp, dst, cv.CV_8U, kernel);
 
-                            // Aplicar filtro de enfoque
-                            cv.filter2D(src, dst, cv.CV_8U, kernel);
+                            // 3. Aumentar brillo y contraste para claridad
+                            let alpha = 1.5; // Contraste (1.0 = sin cambios)
+                            let beta = 20;   // Brillo (0 = sin cambios)
+                            dst.convertTo(dst, -1, alpha, beta);
 
-                            // Mostrar imagen procesada
-                            cv.imshow(outputCanvas, dst);
+                            // 4. Suavizado adicional para realzar detalles
+                            let final = new cv.Mat();
+                            cv.GaussianBlur(dst, final, new cv.Size(3, 3), 0);
+
+                            // Mostrar imagen mejorada
+                            cv.imshow(outputCanvas, final);
 
                             // Liberar memoria
                             src.delete();
                             dst.delete();
+                            temp.delete();
                             kernel.delete();
+                            final.delete();
                         } catch (error) {
                             console.error(error);
                             alert('Ocurrió un error procesando la imagen.');
