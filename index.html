@@ -36,14 +36,35 @@
           const img = document.getElementById('original-image');
           img.src = e.target.result;
 
-          // Create an instance of Upscaler with the specified model
-          const upscaler = new Upscaler({
-            model: ESRGANThick2x, // Referencing the model by its global name
-          });
-
           img.onload = function() {
-            // Upscale the image once it has loaded
-            upscaler.upscale(img).then(upscaledImage => {
+            const maxTextureSize = 4096; // Maximum texture size for WebGL
+
+            // Create an off-screen canvas for resizing the image
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+
+            // Check if the image exceeds the maximum texture size
+            if (img.width > maxTextureSize || img.height > maxTextureSize) {
+              const scaleFactor = Math.min(maxTextureSize / img.width, maxTextureSize / img.height);
+              canvas.width = img.width * scaleFactor;
+              canvas.height = img.height * scaleFactor;
+              ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+            } else {
+              canvas.width = img.width;
+              canvas.height = img.height;
+              ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+            }
+
+            const upscaledImgElement = document.createElement('img');
+            upscaledImgElement.src = canvas.toDataURL();
+
+            // Create an instance of Upscaler with the specified model
+            const upscaler = new Upscaler({
+              model: ESRGANThick2x, // Referencing the model by its global name
+            });
+
+            // Upscale the resized image
+            upscaler.upscale(upscaledImgElement).then(upscaledImage => {
               // Display the upscaled image
               const container = document.getElementById('upscaled-image-container');
               container.innerHTML = ''; // Clear previous upscaled image
