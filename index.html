@@ -1,47 +1,55 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>UpscalerJS Example</title>
-  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@upscalerjs/default-model@latest/dist/umd/index.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/upscaler@latest/dist/browser/umd/upscaler.min.js"></script>
+  <title>UpscalerJS Camera</title>
+  <style>
+    video, canvas {
+      display: block;
+      margin: 0 auto;
+    }
+  </style>
+  <!-- Incluir TensorFlow.js -->
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
+  <!-- Incluir UpscalerJS -->
+  <script src="https://cdn.jsdelivr.net/npm/upscaler"></script>
+  <!-- Incluir el modelo esrgan-thick/4x -->
+  <script src="https://cdn.jsdelivr.net/npm/@upscalerjs/esrgan-thick@latest/dist/4x.min.js"></script>
 </head>
 <body>
-  <h1>UpscalerJS Example</h1>
-  <input type="file" id="inputImage" accept="image/*" />
-  <canvas id="outputCanvas"></canvas>
-
+  <video id="video" width="320" height="240" autoplay></video>
+  <button id="capture">Tomar Foto</button>
+  <canvas id="canvas" width="320" height="240"></canvas>
   <script>
-    const inputImage = document.getElementById("inputImage");
-    const outputCanvas = document.getElementById("outputCanvas");
-    
-    // Initialize the upscaler
-    const upscaler = new Upscaler({
-      model: DefaultUpscalerJSModel,  // Using the default model
-    });
+    const video = document.getElementById('video');
+    const canvas = document.getElementById('canvas');
+    const captureButton = document.getElementById('capture');
+    const upscaler = new Upscaler({ model: window.ESRGANx4 });
 
-    // When an image is selected
-    inputImage.addEventListener("change", function(event) {
-      const file = event.target.files[0];
-      const reader = new FileReader();
+    // Acceder a la cámara frontal
+    navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } })
+      .then(stream => {
+        video.srcObject = stream;
+      })
+      .catch(err => {
+        console.error("Error al acceder a la cámara: ", err);
+      });
 
-      reader.onload = function(e) {
-        const img = new Image();
-        img.onload = function() {
-          // Upscale the image
-          upscaler.upscale(img).then(result => {
-            const ctx = outputCanvas.getContext("2d");
-            outputCanvas.width = result.width;
-            outputCanvas.height = result.height;
-            ctx.drawImage(result, 0, 0);
-          });
-        };
-        img.src = e.target.result;
-      };
-      
-      reader.readAsDataURL(file);
+    // Capturar imagen y mejorarla
+    captureButton.addEventListener('click', async () => {
+      const context = canvas.getContext('2d');
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      context.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+      const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+      const upscaledImageData = await upscaler.upscale(imageData);
+
+      canvas.width = upscaledImageData.width;
+      canvas.height = upscaledImageData.height;
+      context.putImageData(upscaledImageData, 0, 0);
     });
   </script>
 </body>
