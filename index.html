@@ -1,100 +1,37 @@
-<!DOCTYPE html>
-<html lang="en">
+<!DOCTYPE html> 
+<html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Waifu - Super Resolución</title>
-    <script async src="https://docs.opencv.org/4.x/opencv.js" onload="onOpenCvReady()" onerror="alert('Error al cargar OpenCV.js')"></script>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            margin: 20px;
-            text-align: center;
-        }
-        #outputCanvas {
-            margin-top: 20px;
-            max-width: 100%;
-        }
-    </style>
+	<meta charset="utf-8" />
+	<title>Detección de movimiento</title>
+	<script type="text/javascript" src="resemble.js"></script>
+	<script type="text/javascript" src="camara.js"></script>
+	<style type="text/css">
+		body {
+			background-color: #CCC;
+		}
+		div.pantallas{
+			text-align: center;
+		}
+		.no_display {
+			display: none;
+		}
+	</style>
 </head>
 <body>
-    <h1>/waifu - Super Resolución</h1>
-    <p>Sube una imagen para maximizar la nitidez y claridad.</p>
-    <input type="file" id="imageInput" accept="image/*">
-    <canvas id="outputCanvas"></canvas>
+	<div class="pantallas">
+		<div class="video">
+			<button id="estado">Ocultar</button>
+			<video id="video" autoplay>Esto es una etiqueta video</video>
+		</div>
 
-    <script>
-        let imageInput = document.getElementById('imageInput');
-        let outputCanvas = document.getElementById('outputCanvas');
-        let ctx = outputCanvas.getContext('2d');
+		<button id="copiar">\/</button>
 
-        function onOpenCvReady() {
-            console.log('OpenCV.js cargado y listo.');
-        }
-
-        imageInput.addEventListener('change', function (event) {
-            if (event.target.files && event.target.files[0]) {
-                let file = event.target.files[0];
-                let reader = new FileReader();
-
-                reader.onload = function (e) {
-                    let img = new Image();
-                    img.onload = function () {
-                        outputCanvas.width = img.width;
-                        outputCanvas.height = img.height;
-                        ctx.drawImage(img, 0, 0);
-
-                        try {
-                            let src = cv.imread(outputCanvas);
-                            let dst = new cv.Mat();
-
-                            // 1. Reducir ruido con filtro bilateral (preserva bordes)
-                            let temp = new cv.Mat();
-                            cv.bilateralFilter(src, temp, 15, 75, 75);
-
-                            // 2. Aplicar un filtro de enfoque avanzado
-                            let kernel = cv.matFromArray(3, 3, cv.CV_32F, [
-                                -1, -1, -1,
-                                -1,  9, -1,
-                                -1, -1, -1
-                            ]);
-                            cv.filter2D(temp, dst, cv.CV_8U, kernel);
-
-                            // 3. Aumentar brillo y contraste para claridad
-                            let alpha = 1.5; // Contraste (1.0 = sin cambios)
-                            let beta = 20;   // Brillo (0 = sin cambios)
-                            dst.convertTo(dst, -1, alpha, beta);
-
-                            // 4. Suavizado adicional para realzar detalles
-                            let final = new cv.Mat();
-                            cv.GaussianBlur(dst, final, new cv.Size(3, 3), 0);
-
-                            // Mostrar imagen mejorada
-                            cv.imshow(outputCanvas, final);
-
-                            // Liberar memoria
-                            src.delete();
-                            dst.delete();
-                            temp.delete();
-                            kernel.delete();
-                            final.delete();
-                        } catch (error) {
-                            console.error(error);
-                            alert('Ocurrió un error procesando la imagen.');
-                        }
-                    };
-                    img.src = e.target.result;
-                };
-
-                reader.onerror = function () {
-                    alert('Error al cargar la imagen. Intenta de nuevo.');
-                };
-
-                reader.readAsDataURL(file);
-            } else {
-                alert('No se seleccionó ninguna imagen.');
-            }
-        });
-    </script>
+		<div class="canvas">
+			<canvas id="canvas">Esta es una etiqueta canvas</canvas>
+			<p id="resultado">ESTÁTICO</p>
+		</div>
+	</div>
+	
+	<script type="text/javascript">inicio();</script>
 </body>
 </html>
