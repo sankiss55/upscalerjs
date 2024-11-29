@@ -1,37 +1,97 @@
-<!DOCTYPE html> 
-<html lang="es">
+<!DOCTYPE html>
+<html lang="en">
 <head>
-	<meta charset="utf-8" />
-	<title>Detección de movimiento</title>
-	<script type="text/javascript" src="resemble.js"></script>
-	<script type="text/javascript" src="camara.js"></script>
-	<style type="text/css">
-		body {
-			background-color: #CCC;
-		}
-		div.pantallas{
-			text-align: center;
-		}
-		.no_display {
-			display: none;
-		}
-	</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mejor Foto</title>
 </head>
 <body>
-	<div class="pantallas">
-		<div class="video">
-			<button id="estado">Ocultar</button>
-			<video id="video" autoplay>Esto es una etiqueta video</video>
-		</div>
+    <h1>Cámara Web: Evaluar Calidad de Fotos</h1>
+    <video id="video" autoplay playsinline width="320" height="240"></video>
+    <button id="capture">Capturar 5 Fotos</button>
+    <div id="photos"></div>
+    <h2 id="best-photo"></h2>
 
-		<button id="copiar">\/</button>
+    <script>
+        const video = document.getElementById('video');
+        const captureButton = document.getElementById('capture');
+        const photosContainer = document.getElementById('photos');
+        const bestPhotoText = document.getElementById('best-photo');
 
-		<div class="canvas">
-			<canvas id="canvas">Esta es una etiqueta canvas</canvas>
-			<p id="resultado">ESTÁTICO</p>
-		</div>
-	</div>
-	
-	<script type="text/javascript">inicio();</script>
+        const constraints = { video: true }; // Configuración para usar la cámara
+        let photos = [];
+        let qualities = [];
+
+        // Inicializa la cámara web
+        navigator.mediaDevices.getUserMedia(constraints)
+            .then(stream => {
+                video.srcObject = stream;
+            })
+            .catch(err => console.error('Error al acceder a la cámara: ', err));
+
+        // Función para capturar un frame
+        function capturePhoto() {
+            const canvas = document.createElement('canvas');
+            const context = canvas.getContext('2d');
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            context.drawImage(video, 0, 0, canvas.width, canvas.height);
+            return canvas.toDataURL('image/png'); // Devuelve la imagen en formato Base64
+        }
+
+        // Función para calcular la calidad (basada en claridad)
+        function evaluateQuality(dataUrl) {
+            return new Promise(resolve => {
+                const img = new Image();
+                img.src = dataUrl;
+                img.onload = () => {
+                    const canvas = document.createElement('canvas');
+                    const ctx = canvas.getContext('2d');
+                    canvas.width = img.width;
+                    canvas.height = img.height;
+                    ctx.drawImage(img, 0, 0);
+
+                    // Convierte a escala de grises y calcula la claridad
+                    const imageData = ctx.getImageData(0, 0, img.width, img.height);
+                    let clarity = 0;
+                    for (let i = 0; i < imageData.data.length; i += 4) {
+                        const gray = 0.299 * imageData.data[i] +
+                                     0.587 * imageData.data[i + 1] +
+                                     0.114 * imageData.data[i + 2];
+                        clarity += gray;
+                    }
+                    clarity = clarity / (img.width * img.height); // Promedio de brillo
+                    resolve(clarity);
+                };
+            });
+        }
+
+        // Captura 5 fotos y evalúa la mejor
+        captureButton.addEventListener('click', async () => {
+            photos = [];
+            qualities = [];
+            photosContainer.innerHTML = '';
+            bestPhotoText.textContent = '';
+
+            for (let i = 0; i < 5; i++) {
+                const photo = capturePhoto();
+                photos.push(photo);
+                const quality = await evaluateQuality(photo);
+                qualities.push(quality);
+
+                // Muestra las fotos
+                const img = document.createElement('img');
+                img.src = photo;
+                img.width = 160;
+                img.style.margin = '10px';
+                photosContainer.appendChild(img);
+            }
+
+            // Encuentra la mejor foto
+            const bestIndex = qualities.indexOf(Math.max(...qualities));
+            bestPhotoText.textContent = `La mejor foto es la número ${bestIndex + 1}`;
+            photosContainer.children[bestIndex].style.border = '5px solid green';
+        });
+    </script>
 </body>
 </html>
