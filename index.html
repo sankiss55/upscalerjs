@@ -18,7 +18,7 @@
         const photosContainer = document.getElementById('photos');
         const bestPhotoText = document.getElementById('best-photo');
 
-        const constraints = { video: true }; // Configuración para usar la cámara
+        const constraints = { video: true };
         let photos = [];
         let qualities = [];
 
@@ -36,10 +36,10 @@
             canvas.width = video.videoWidth;
             canvas.height = video.videoHeight;
             context.drawImage(video, 0, 0, canvas.width, canvas.height);
-            return canvas.toDataURL('image/png'); // Devuelve la imagen en formato Base64
+            return canvas.toDataURL('image/png');
         }
 
-        // Función para calcular la calidad (basada en claridad)
+        // Evalúa claridad con el filtro Laplaciano
         function evaluateQuality(dataUrl) {
             return new Promise(resolve => {
                 const img = new Image();
@@ -51,17 +51,28 @@
                     canvas.height = img.height;
                     ctx.drawImage(img, 0, 0);
 
-                    // Convierte a escala de grises y calcula la claridad
                     const imageData = ctx.getImageData(0, 0, img.width, img.height);
+
+                    // Laplacian para nitidez
                     let clarity = 0;
                     for (let i = 0; i < imageData.data.length; i += 4) {
-                        const gray = 0.299 * imageData.data[i] +
-                                     0.587 * imageData.data[i + 1] +
-                                     0.114 * imageData.data[i + 2];
-                        clarity += gray;
+                        const r = imageData.data[i];
+                        const g = imageData.data[i + 1];
+                        const b = imageData.data[i + 2];
+                        const intensity = 0.299 * r + 0.587 * g + 0.114 * b;
+                        clarity += Math.abs(intensity);
                     }
-                    clarity = clarity / (img.width * img.height); // Promedio de brillo
-                    resolve(clarity);
+
+                    // Promedio de brillo para exposición
+                    let brightness = clarity / (img.width * img.height);
+
+                    // Penalizamos fotos muy oscuras o sobreexpuestas
+                    let quality = clarity;
+                    if (brightness < 50 || brightness > 200) {
+                        quality -= 5000; // Penalización
+                    }
+
+                    resolve(quality);
                 };
             });
         }
