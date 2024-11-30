@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mejor Foto</title>
+    <title>Mejor Foto Sin Movimiento</title>
 </head>
 <body>
     <h1>Cámara Web: Evaluar Calidad de Fotos</h1>
@@ -39,7 +39,7 @@
             return canvas.toDataURL('image/png');
         }
 
-        // Evalúa claridad con el filtro Laplaciano
+        // Evalúa calidad (claridad, exposición, y detección de movimiento)
         function evaluateQuality(dataUrl) {
             return new Promise(resolve => {
                 const img = new Image();
@@ -53,23 +53,32 @@
 
                     const imageData = ctx.getImageData(0, 0, img.width, img.height);
 
-                    // Laplacian para nitidez
-                    let clarity = 0;
-                    for (let i = 0; i < imageData.data.length; i += 4) {
-                        const r = imageData.data[i];
-                        const g = imageData.data[i + 1];
-                        const b = imageData.data[i + 2];
-                        const intensity = 0.299 * r + 0.587 * g + 0.114 * b;
-                        clarity += Math.abs(intensity);
+                    // Detecta movimiento basado en diferencias entre píxeles
+                    let motion = 0;
+                    for (let y = 0; y < img.height - 1; y++) {
+                        for (let x = 0; x < img.width - 1; x++) {
+                            const i = (y * img.width + x) * 4;
+                            const diff =
+                                Math.abs(imageData.data[i] - imageData.data[i + 4]) + // Comparación horizontal
+                                Math.abs(imageData.data[i] - imageData.data[i + img.width * 4]); // Comparación vertical
+                            motion += diff;
+                        }
                     }
+                    motion = motion / (img.width * img.height);
 
-                    // Promedio de brillo para exposición
-                    let brightness = clarity / (img.width * img.height);
+                    // Calcula exposición (brillo promedio)
+                    let brightness = 0;
+                    for (let i = 0; i < imageData.data.length; i += 4) {
+                        brightness += 0.299 * imageData.data[i] +
+                                      0.587 * imageData.data[i + 1] +
+                                      0.114 * imageData.data[i + 2];
+                    }
+                    brightness = brightness / (img.width * img.height);
 
-                    // Penalizamos fotos muy oscuras o sobreexpuestas
-                    let quality = clarity;
+                    // Penaliza movimiento y exposición incorrecta
+                    let quality = 1000 / (motion + 1); // Penaliza movimiento (menos es mejor)
                     if (brightness < 50 || brightness > 200) {
-                        quality -= 5000; // Penalización
+                        quality -= 5000; // Penaliza luz inadecuada
                     }
 
                     resolve(quality);
