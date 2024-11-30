@@ -3,144 +3,108 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Evaluar Calidad de Fotos</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            margin: 20px;
-            text-align: center;
-        }
-        video {
-            border: 2px solid #ccc;
-            margin-bottom: 10px;
-        }
-        button {
-            padding: 10px 20px;
-            font-size: 16px;
-            cursor: pointer;
-        }
-        img {
-            display: inline-block;
-            margin: 10px;
-            border: 2px solid #ccc;
-        }
-        img.best {
-            border-color: green;
-            border-width: 5px;
-        }
-        #best-photo {
-            margin-top: 20px;
-            font-size: 18px;
-            font-weight: bold;
-        }
-    </style>
+    <title>Seleccionar Mejor Imagen</title>
+    <script async src="https://docs.opencv.org/4.x/opencv.js"></script>
 </head>
 <body>
-    <h1>Cámara Web: Evaluar Calidad de Fotos</h1>
-    <video id="video" autoplay playsinline width="320" height="240"></video>
-    <br>
-    <button id="capture">Capturar 5 Fotos</button>
-    <div id="photos"></div>
-    <h2 id="best-photo"></h2>
+    <h1>Seleccionar la Mejor Imagen</h1>
+    <p>Captura 5 imágenes con tu cámara:</p>
+    <video id="video" autoplay playsinline style="width: 100%; max-width: 400px; border: 1px solid black;"></video>
+    <button id="captureButton" onclick="captureImage()">Capturar Imagen</button>
+    <p id="count">Imágenes capturadas: 0 / 5</p>
+    <button id="processButton" onclick="processImages()" disabled>Seleccionar la Mejor</button>
+    <p id="result"></p>
+    <canvas id="canvas" style="display: none;"></canvas>
 
     <script>
-        const video = document.getElementById('video');
-        const captureButton = document.getElementById('capture');
-        const photosContainer = document.getElementById('photos');
-        const bestPhotoText = document.getElementById('best-photo');
+        let videoStream;
+        let capturedImages = [];
+        const maxImages = 5;
 
-        const constraints = { video: true };
-        let photos = [];
-        let qualities = [];
-
-        // Inicializa la cámara web
-        navigator.mediaDevices.getUserMedia(constraints)
-            .then(stream => {
-                video.srcObject = stream;
-            })
-            .catch(err => console.error('Error al acceder a la cámara: ', err));
-
-        // Captura un frame
-        function capturePhoto() {
-            const canvas = document.createElement('canvas');
-            const context = canvas.getContext('2d');
-            canvas.width = video.videoWidth;
-            canvas.height = video.videoHeight;
-            context.drawImage(video, 0, 0, canvas.width, canvas.height);
-            return canvas.toDataURL('image/png');
+        // Acceder a la cámara
+        async function startCamera() {
+            videoStream = await navigator.mediaDevices.getUserMedia({ video: true });
+            document.getElementById("video").srcObject = videoStream;
         }
 
-        // Evalúa calidad de una foto
-        async function evaluateQuality(dataUrl) {
-            const img = new Image();
-            img.src = dataUrl;
+        // Capturar imagen
+        function captureImage() {
+            if (capturedImages.length >= maxImages) {
+                alert("Ya has capturado las 5 imágenes.");
+                return;
+            }
 
-            return new Promise(resolve => {
-                img.onload = () => {
-                    const canvas = document.createElement('canvas');
-                    const ctx = canvas.getContext('2d');
-                    canvas.width = img.width;
-                    canvas.height = img.height;
-                    ctx.drawImage(img, 0, 0);
+            const video = document.getElementById("video");
+            const canvas = document.getElementById("canvas");
+            const ctx = canvas.getContext("2d");
 
-                    const imageData = ctx.getImageData(0, 0, img.width, img.height);
+            // Configurar canvas para la captura
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-                    // Detección de movimiento
-                    let motion = 0;
-                    for (let y = 0; y < img.height - 1; y++) {
-                        for (let x = 0; x < img.width - 1; x++) {
-                            const i = (y * img.width + x) * 4;
-                            const diff =
-                                Math.abs(imageData.data[i] - imageData.data[i + 4]) + // Comparación horizontal
-                                Math.abs(imageData.data[i] - imageData.data[i + img.width * 4]); // Comparación vertical
-                            motion += diff;
-                        }
-                    }
-                    motion /= img.width * img.height;
+            // Guardar la imagen capturada
+            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            capturedImages.push(imageData);
 
-                    // Cálculo de exposición (brillo promedio)
-                    let brightness = 0;
-                    for (let i = 0; i < imageData.data.length; i += 4) {
-                        brightness += 0.299 * imageData.data[i] +
-                                      0.587 * imageData.data[i + 1] +
-                                      0.114 * imageData.data[i + 2];
-                    }
-                    brightness /= img.width * img.height;
+            // Actualizar contador
+            document.getElementById("count").innerText = `Imágenes capturadas: ${capturedImages.length} / ${maxImages}`;
 
-                    // Penaliza movimiento y exposición incorrecta
-                    let quality = 1000 / (motion + 1);
-                    if (brightness < 50 || brightness > 200) quality -= 5000;
+            // Activar botón de procesamiento si ya se capturaron 5
+            if (capturedImages.length === maxImages) {
+                document.getElementById("processButton").disabled = false;
+            }
+        }
 
-                    resolve(quality);
-                };
+        // Procesar las imágenes capturadas
+        async function processImages() {
+            const scores = [];
+            for (let i = 0; i < capturedImages.length; i++) {
+                const score = await analyzeImage(capturedImages[i]);
+                scores.push({ index: i + 1, score });
+            }
+
+            // Encontrar la mejor imagen
+            scores.sort((a, b) => b.score - a.score);
+            const best = scores[0];
+            document.getElementById("result").innerText = `La mejor imagen es la número ${best.index} con un puntaje de claridad de ${best.score.toFixed(2)}`;
+        }
+
+        // Analizar una imagen usando OpenCV.js
+        function analyzeImage(imageData) {
+            return new Promise((resolve) => {
+                const canvas = document.getElementById("canvas");
+                const ctx = canvas.getContext("2d");
+
+                // Dibujar la imagen en el canvas
+                ctx.putImageData(imageData, 0, 0);
+
+                // Leer la imagen con OpenCV.js
+                const src = cv.imread(canvas);
+                const gray = new cv.Mat();
+                cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY, 0);
+
+                // Variación de Laplace para medir claridad
+                const laplacian = new cv.Mat();
+                cv.Laplacian(gray, laplacian, cv.CV_64F);
+                const mean = new cv.Mat();
+                const stddev = new cv.Mat();
+                cv.meanStdDev(laplacian, mean, stddev);
+
+                const clarity = stddev.data64F[0]; // Desviación estándar
+                resolve(clarity);
+
+                // Liberar memoria
+                src.delete();
+                gray.delete();
+                laplacian.delete();
+                mean.delete();
+                stddev.delete();
             });
         }
 
-        // Captura fotos y encuentra la mejor
-        captureButton.addEventListener('click', async () => {
-            photos = [];
-            qualities = [];
-            photosContainer.innerHTML = '';
-            bestPhotoText.textContent = 'Evaluando...';
-
-            for (let i = 0; i < 5; i++) {
-                const photo = capturePhoto();
-                photos.push(photo);
-
-                const quality = await evaluateQuality(photo);
-                qualities.push(quality);
-
-                const img = document.createElement('img');
-                img.src = photo;
-                img.width = 160;
-                img.classList.add('photo');
-                photosContainer.appendChild(img);
-            }
-
-            const bestIndex = qualities.indexOf(Math.max(...qualities));
-            bestPhotoText.textContent = `La mejor foto es la número ${bestIndex + 1}`;
-            photosContainer.children[bestIndex].classList.add('best');
-        });
+        // Iniciar cámara al cargar la página
+        window.onload = startCamera;
     </script>
 </body>
 </html>
