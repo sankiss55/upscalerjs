@@ -3,11 +3,42 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mejor Foto Sin Movimiento</title>
+    <title>Evaluar Calidad de Fotos</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            text-align: center;
+        }
+        video {
+            border: 2px solid #ccc;
+            margin-bottom: 10px;
+        }
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+        img {
+            display: inline-block;
+            margin: 10px;
+            border: 2px solid #ccc;
+        }
+        img.best {
+            border-color: green;
+            border-width: 5px;
+        }
+        #best-photo {
+            margin-top: 20px;
+            font-size: 18px;
+            font-weight: bold;
+        }
+    </style>
 </head>
 <body>
     <h1>Cámara Web: Evaluar Calidad de Fotos</h1>
     <video id="video" autoplay playsinline width="320" height="240"></video>
+    <br>
     <button id="capture">Capturar 5 Fotos</button>
     <div id="photos"></div>
     <h2 id="best-photo"></h2>
@@ -29,7 +60,7 @@
             })
             .catch(err => console.error('Error al acceder a la cámara: ', err));
 
-        // Función para capturar un frame
+        // Captura un frame
         function capturePhoto() {
             const canvas = document.createElement('canvas');
             const context = canvas.getContext('2d');
@@ -39,11 +70,12 @@
             return canvas.toDataURL('image/png');
         }
 
-        // Evalúa calidad (claridad, exposición, y detección de movimiento)
-        function evaluateQuality(dataUrl) {
+        // Evalúa calidad de una foto
+        async function evaluateQuality(dataUrl) {
+            const img = new Image();
+            img.src = dataUrl;
+
             return new Promise(resolve => {
-                const img = new Image();
-                img.src = dataUrl;
                 img.onload = () => {
                     const canvas = document.createElement('canvas');
                     const ctx = canvas.getContext('2d');
@@ -53,7 +85,7 @@
 
                     const imageData = ctx.getImageData(0, 0, img.width, img.height);
 
-                    // Detecta movimiento basado en diferencias entre píxeles
+                    // Detección de movimiento
                     let motion = 0;
                     for (let y = 0; y < img.height - 1; y++) {
                         for (let x = 0; x < img.width - 1; x++) {
@@ -64,53 +96,50 @@
                             motion += diff;
                         }
                     }
-                    motion = motion / (img.width * img.height);
+                    motion /= img.width * img.height;
 
-                    // Calcula exposición (brillo promedio)
+                    // Cálculo de exposición (brillo promedio)
                     let brightness = 0;
                     for (let i = 0; i < imageData.data.length; i += 4) {
                         brightness += 0.299 * imageData.data[i] +
                                       0.587 * imageData.data[i + 1] +
                                       0.114 * imageData.data[i + 2];
                     }
-                    brightness = brightness / (img.width * img.height);
+                    brightness /= img.width * img.height;
 
                     // Penaliza movimiento y exposición incorrecta
-                    let quality = 1000 / (motion + 1); // Penaliza movimiento (menos es mejor)
-                    if (brightness < 50 || brightness > 200) {
-                        quality -= 5000; // Penaliza luz inadecuada
-                    }
+                    let quality = 1000 / (motion + 1);
+                    if (brightness < 50 || brightness > 200) quality -= 5000;
 
                     resolve(quality);
                 };
             });
         }
 
-        // Captura 5 fotos y evalúa la mejor
+        // Captura fotos y encuentra la mejor
         captureButton.addEventListener('click', async () => {
             photos = [];
             qualities = [];
             photosContainer.innerHTML = '';
-            bestPhotoText.textContent = '';
+            bestPhotoText.textContent = 'Evaluando...';
 
             for (let i = 0; i < 5; i++) {
                 const photo = capturePhoto();
                 photos.push(photo);
+
                 const quality = await evaluateQuality(photo);
                 qualities.push(quality);
 
-                // Muestra las fotos
                 const img = document.createElement('img');
                 img.src = photo;
                 img.width = 160;
-                img.style.margin = '10px';
+                img.classList.add('photo');
                 photosContainer.appendChild(img);
             }
 
-            // Encuentra la mejor foto
             const bestIndex = qualities.indexOf(Math.max(...qualities));
             bestPhotoText.textContent = `La mejor foto es la número ${bestIndex + 1}`;
-            photosContainer.children[bestIndex].style.border = '5px solid green';
+            photosContainer.children[bestIndex].classList.add('best');
         });
     </script>
 </body>
