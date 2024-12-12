@@ -1,74 +1,76 @@
-vñ<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Extraer Letras Negras de una Imagen</title>
+    <title>Pixi.js: Detectar Letras Negras</title>
+    <script src="https://pixijs.download/release/pixi.min.js"></script>
 </head>
 <body>
-
-    <h1>Extraer Letras Negras de una Imagen</h1>
-
-    <input type="file" id="imageInput" />
-    <canvas id="canvas" style="border: 1px solid black;"></canvas> <!-- Canvas visible -->
+    <h1>Detectar Letras Negras con Pixi.js</h1>
+    <input type="file" id="upload" accept="image/*">
+    <div id="app"></div>
 
     <script>
-        const imageInput = document.getElementById('imageInput');
-        const canvas = document.getElementById('canvas');
-        const ctx = canvas.getContext('2d');
-
-        // Función para procesar la imagen
-        function extractBlackLetters(image) {
-            // Establecer dimensiones del canvas
-            canvas.width = image.width;
-            canvas.height = image.height;
-
-            // Dibujar la imagen en el canvas
-            ctx.drawImage(image, 0, 0);
-
-            // Obtener los píxeles de la imagen
-            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-            const data = imageData.data;
-
-            // Recorrer los píxeles y buscar los negros (umbral para considerar negro)
-            for (let i = 0; i < data.length; i += 4) {
-                const r = data[i];     // Rojo
-                const g = data[i + 1]; // Verde
-                const b = data[i + 2]; // Azul
-                const a = data[i + 3]; // Alfa (transparencia)
-
-                // Verificar si el píxel es negro (puedes ajustar el umbral según necesites)
-                if (r < 50 && g < 50 && b < 50 && a > 100) {
-                    // Cambiar el color de fondo del píxel a blanco (para visualización)
-                    data[i] = 255;     // Rojo
-                    data[i + 1] = 255; // Verde
-                    data[i + 2] = 255; // Azul
-                    data[i + 3] = 255; // Alfa (opacidad)
-                }
-            }
-
-            // Colocar los datos de nuevo en la imagen
-            ctx.putImageData(imageData, 0, 0);
-        }
-
-        // Manejar la carga de la imagen
-        imageInput.addEventListener('change', (e) => {
-            const file = e.target.files[0];
-            if (file) {
-                const reader = new FileReader();
-                reader.onload = function(event) {
-                    const img = new Image();
-                    img.onload = function() {
-                        extractBlackLetters(img);
-                        // Mostrar el resultado en el canvas
-                        canvas.style.display = 'block'; // Hacer el canvas visible
-                    };
-                    img.src = event.target.result;
-                };
-                reader.readAsDataURL(file);
-            }
+        // Crear la aplicación Pixi.js
+        const app = new PIXI.Application({
+            width: 800,
+            height: 600,
+            backgroundColor: 0xffffff
         });
-    </script>
+        document.getElementById("app").appendChild(app.view);
 
+        // Subir una imagen
+        const uploadInput = document.getElementById("upload");
+        uploadInput.addEventListener("change", function(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const imgURL = URL.createObjectURL(file);
+            processImage(imgURL);
+        });
+
+        function processImage(imageURL) {
+            // Cargar la textura
+            const texture = PIXI.Texture.from(imageURL);
+            const sprite = new PIXI.Sprite(texture);
+
+            // Configurar la posición inicial
+            sprite.x = 0;
+            sprite.y = 0;
+            sprite.width = app.renderer.width;
+            sprite.height = app.renderer.height;
+
+            // Agregar sprite al escenario
+            app.stage.addChild(sprite);
+
+            // Crear un filtro para detectar letras negras
+            const blackFilter = new PIXI.Filter(null, `
+                precision mediump float;
+                varying vec2 vTextureCoord;
+                uniform sampler2D uSampler;
+
+                void main() {
+                    vec4 color = texture2D(uSampler, vTextureCoord);
+                    float luminance = (color.r + color.g + color.b) / 3.0;
+
+                    // Detectar píxeles oscuros (cercanos al negro)
+                    if (luminance < 0.2) {
+                        gl_FragColor = color; // Mantener negro
+                    } else {
+                        gl_FragColor = vec4(0.0, 0.0, 0.0, 0.0); // Hacer transparente
+                    }
+                }
+            `);
+
+            // Aplicar el filtro al sprite
+            sprite.filters = [blackFilter];
+
+            // Mejorar la apariencia con un efecto de sombra
+            const blurFilter = new PIXI.filters.BlurFilter();
+            blurFilter.blur = 2; // Nivel de desenfoque
+            sprite.filters.push(blurFilter);
+        }
+    </script>
 </body>
 </html>
