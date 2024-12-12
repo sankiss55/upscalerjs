@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+vñ<!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
@@ -10,7 +10,7 @@
     <h1>Extraer Letras Negras de una Imagen</h1>
 
     <input type="file" id="imageInput" />
-    <canvas id="canvas" style="display: none;"></canvas>
+    <canvas id="canvas" style="border: 1px solid black;"></canvas> <!-- Canvas visible -->
 
     <script>
         const imageInput = document.getElementById('imageInput');
@@ -61,7 +61,7 @@
                     img.onload = function() {
                         extractBlackLetters(img);
                         // Mostrar el resultado en el canvas
-                        document.body.appendChild(canvas);
+                        canvas.style.display = 'block'; // Hacer el canvas visible
                     };
                     img.src = event.target.result;
                 };
