@@ -1,58 +1,89 @@
-<!DOCTYPE html>
-<html lang="en">
+v<!DOCTYPE html>
+<html lang="es">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>UpscalerJS Example</title>
-  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@upscalerjs/default-model@latest/dist/umd/index.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/upscaler@latest/dist/browser/umd/upscaler.min.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pixi.js: Detectar Letras Negras</title>
+    <script src="https://pixijs.download/release/pixi.min.js"></script>
 </head>
 <body>
-  <h1>UpscalerJS Example</h1>
-  <video id="video" width="640" height="480" autoplay></video>
-  <canvas id="outputCanvas"></canvas>
+    <h1>Detectar Letras Negras con Pixi.js</h1>
+    <input type="file" id="upload" accept="image/*">
+    <div id="app"></div>
 
-  <script>
-    const video = document.getElementById("video");
-    const outputCanvas = document.getElementById("outputCanvas");
-
-    // Inicializar la cámara
-    navigator.mediaDevices.getUserMedia({ video: true })
-      .then(stream => {
-        video.srcObject = stream;
-      })
-      .catch(error => {
-        console.error("Error accessing the camera", error);
-      });
-
-    // Inicializar el upscaler
-    const upscaler = new Upscaler({
-      model: DefaultUpscalerJSModel,  // Usar el modelo por defecto
-    });
-
-    // Función para capturar una foto después de 5 segundos
-    function takePhoto() {
-      setTimeout(() => {
-        // Crear un canvas para capturar la imagen del video
-        const context = outputCanvas.getContext("2d");
-        context.drawImage(video, 0, 0, outputCanvas.width, outputCanvas.height);
-
-        // Obtener la imagen capturada
-        const img = outputCanvas;
-
-        // Realizar el upscale de la imagen
-        upscaler.upscale(img).then(result => {
-          const ctx = outputCanvas.getContext("2d");
-          outputCanvas.width = result.width;
-          outputCanvas.height = result.height;
-          ctx.drawImage(result, 0, 0);
+    <script>
+        // Crear la aplicación Pixi.js
+        const app = new PIXI.Application({
+            width: 800,
+            height: 600,
+            backgroundColor: 0xffffff
         });
-      }, 5000); // Esperar 5 segundos antes de tomar la foto
-    }
+        document.getElementById("app").appendChild(app.view);
 
-    // Llamar a la función para tomar la foto
-    takePhoto();
-  </script>
+        // Subir una imagen
+        const uploadInput = document.getElementById("upload");
+        uploadInput.addEventListener("change", function(event) {
+            const file = event.target.files[0];
+            if (!file) {
+                alert("Por favor, selecciona un archivo de imagen válido.");
+                return;
+            }
+
+            const imgURL = URL.createObjectURL(file);
+            processImage(imgURL);
+        });
+
+        function processImage(imageURL) {
+            try {
+                // Limpiar el canvas antes de agregar nuevos elementos
+                app.stage.removeChildren();
+
+                // Cargar la textura
+                const texture = PIXI.Texture.from(imageURL);
+                const sprite = new PIXI.Sprite(texture);
+
+                // Configurar la posición inicial
+                sprite.x = 0;
+                sprite.y = 0;
+                sprite.width = app.renderer.width;
+                sprite.height = app.renderer.height;
+
+                // Agregar sprite al escenario
+                app.stage.addChild(sprite);
+
+                // Crear un filtro para detectar letras negras
+                const blackFilter = new PIXI.Filter(null, `
+                    precision mediump float;
+                    varying vec2 vTextureCoord;
+                    uniform sampler2D uSampler;
+
+                    void main() {
+                        vec4 color = texture2D(uSampler, vTextureCoord);
+                        float luminance = (color.r + color.g + color.b) / 3.0;
+
+                        // Detectar píxeles oscuros (cercanos al negro)
+                        if (luminance < 0.2) {
+                            gl_FragColor = color; // Mantener negro
+                        } else {
+                            gl_FragColor = vec4(1.0, 1.0, 1.0, 0.0); // Hacer transparente
+                        }
+                    }
+                `);
+
+                // Aplicar el filtro al sprite
+                sprite.filters = [blackFilter];
+
+                // Mejorar la apariencia con un efecto de sombra
+                const blurFilter = new PIXI.filters.BlurFilter();
+                blurFilter.blur = 2; // Nivel de desenfoque
+                sprite.filters.push(blurFilter);
+
+                console.log("Imagen procesada correctamente. Resultado visible en el canvas.");
+            } catch (error) {
+                alert("Ocurrió un error al procesar la imagen: " + error.message);
+                console.error(error);
+            }
+        }
+    </script>
 </body>
 </html>
