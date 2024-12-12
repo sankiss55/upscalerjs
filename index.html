@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+h<!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
@@ -24,52 +24,62 @@
         const uploadInput = document.getElementById("upload");
         uploadInput.addEventListener("change", function(event) {
             const file = event.target.files[0];
-            if (!file) return;
+            if (!file) {
+                alert("Por favor, selecciona un archivo de imagen válido.");
+                return;
+            }
 
             const imgURL = URL.createObjectURL(file);
             processImage(imgURL);
         });
 
         function processImage(imageURL) {
-            // Cargar la textura
-            const texture = PIXI.Texture.from(imageURL);
-            const sprite = new PIXI.Sprite(texture);
+            try {
+                // Cargar la textura
+                const texture = PIXI.Texture.from(imageURL);
+                const sprite = new PIXI.Sprite(texture);
 
-            // Configurar la posición inicial
-            sprite.x = 0;
-            sprite.y = 0;
-            sprite.width = app.renderer.width;
-            sprite.height = app.renderer.height;
+                // Configurar la posición inicial
+                sprite.x = 0;
+                sprite.y = 0;
+                sprite.width = app.renderer.width;
+                sprite.height = app.renderer.height;
 
-            // Agregar sprite al escenario
-            app.stage.addChild(sprite);
+                // Agregar sprite al escenario
+                app.stage.addChild(sprite);
 
-            // Crear un filtro para detectar letras negras
-            const blackFilter = new PIXI.Filter(null, `
-                precision mediump float;
-                varying vec2 vTextureCoord;
-                uniform sampler2D uSampler;
+                // Crear un filtro para detectar letras negras
+                const blackFilter = new PIXI.Filter(null, `
+                    precision mediump float;
+                    varying vec2 vTextureCoord;
+                    uniform sampler2D uSampler;
 
-                void main() {
-                    vec4 color = texture2D(uSampler, vTextureCoord);
-                    float luminance = (color.r + color.g + color.b) / 3.0;
+                    void main() {
+                        vec4 color = texture2D(uSampler, vTextureCoord);
+                        float luminance = (color.r + color.g + color.b) / 3.0;
 
-                    // Detectar píxeles oscuros (cercanos al negro)
-                    if (luminance < 0.2) {
-                        gl_FragColor = color; // Mantener negro
-                    } else {
-                        gl_FragColor = vec4(0.0, 0.0, 0.0, 0.0); // Hacer transparente
+                        // Detectar píxeles oscuros (cercanos al negro)
+                        if (luminance < 0.2) {
+                            gl_FragColor = color; // Mantener negro
+                        } else {
+                            gl_FragColor = vec4(0.0, 0.0, 0.0, 0.0); // Hacer transparente
+                        }
                     }
-                }
-            `);
+                `);
 
-            // Aplicar el filtro al sprite
-            sprite.filters = [blackFilter];
+                // Aplicar el filtro al sprite
+                sprite.filters = [blackFilter];
 
-            // Mejorar la apariencia con un efecto de sombra
-            const blurFilter = new PIXI.filters.BlurFilter();
-            blurFilter.blur = 2; // Nivel de desenfoque
-            sprite.filters.push(blurFilter);
+                // Mejorar la apariencia con un efecto de sombra
+                const blurFilter = new PIXI.filters.BlurFilter();
+                blurFilter.blur = 2; // Nivel de desenfoque
+                sprite.filters.push(blurFilter);
+
+                console.log("Imagen procesada correctamente.");
+            } catch (error) {
+                alert("Ocurrió un error al procesar la imagen: " + error.message);
+                console.error(error);
+            }
         }
     </script>
 </body>
