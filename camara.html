@@ -1,10 +1,10 @@
-v<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Pixi.js: Detectar Letras Negras</title>
-    <script src="https://pixijs.download/release/pixi.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/pixi.js@8.x/dist/pixi.min.js"></script>
 </head>
 <body>
     <h1>Detectar Letras Negras con Pixi.js</h1>
@@ -16,11 +16,18 @@ v<!DOCTYPE html>
         const app = new PIXI.Application({
             width: 800,
             height: 600,
-            backgroundColor: 0xffffff
+            backgroundColor: 0xffffff,
         });
-        document.getElementById("app").appendChild(app.view);
 
-        // Subir una imagen
+        // Asegurarse de que el canvas sea añadido al DOM
+        const appContainer = document.getElementById("app");
+        if (appContainer) {
+            appContainer.appendChild(app.view);
+        } else {
+            console.error("No se pudo encontrar el contenedor con id 'app'.");
+        }
+
+        // Manejar la subida de una imagen
         const uploadInput = document.getElementById("upload");
         uploadInput.addEventListener("change", function(event) {
             const file = event.target.files[0];
@@ -35,14 +42,14 @@ v<!DOCTYPE html>
 
         function processImage(imageURL) {
             try {
-                // Limpiar el canvas antes de agregar nuevos elementos
+                // Limpiar el escenario antes de agregar nuevos elementos
                 app.stage.removeChildren();
 
-                // Cargar la textura
+                // Cargar la textura de la imagen
                 const texture = PIXI.Texture.from(imageURL);
                 const sprite = new PIXI.Sprite(texture);
 
-                // Configurar la posición inicial
+                // Configurar el sprite
                 sprite.x = 0;
                 sprite.y = 0;
                 sprite.width = app.renderer.width;
@@ -61,26 +68,21 @@ v<!DOCTYPE html>
                         vec4 color = texture2D(uSampler, vTextureCoord);
                         float luminance = (color.r + color.g + color.b) / 3.0;
 
-                        // Detectar píxeles oscuros (cercanos al negro)
+                        // Detectar píxeles oscuros (negros)
                         if (luminance < 0.2) {
                             gl_FragColor = color; // Mantener negro
                         } else {
-                            gl_FragColor = vec4(1.0, 1.0, 1.0, 0.0); // Hacer transparente
+                            gl_FragColor = vec4(1.0, 1.0, 1.0, 0.0); // Transparente
                         }
                     }
                 `);
 
-                // Aplicar el filtro al sprite
+                // Aplicar el filtro
                 sprite.filters = [blackFilter];
 
-                // Mejorar la apariencia con un efecto de sombra
-                const blurFilter = new PIXI.filters.BlurFilter();
-                blurFilter.blur = 2; // Nivel de desenfoque
-                sprite.filters.push(blurFilter);
-
-                console.log("Imagen procesada correctamente. Resultado visible en el canvas.");
+                console.log("Imagen procesada correctamente.");
             } catch (error) {
-                alert("Ocurrió un error al procesar la imagen: " + error.message);
+                alert("Error al procesar la imagen: " + error.message);
                 console.error(error);
             }
         }
