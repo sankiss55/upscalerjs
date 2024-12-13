@@ -3,91 +3,69 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pixi.js: Detectar Letras Negras</title>
-    <script src="https://cdn.jsdelivr.net/npm/pixi.js@8.x/dist/pixi.min.js"></script>
+    <title>Filtro de Letras Negras con OpenCV.js</title>
+    <script async src="https://docs.opencv.org/4.x/opencv.js" type="text/javascript"></script>
 </head>
 <body>
-    <h1>Detectar Letras Negras con Pixi.js</h1>
-    <input type="file" id="upload" accept="image/*">
-    <div id="app"></div>
+    <h1>Detectar y Dejar Solo Letras Negras</h1>
+    <input type="file" id="fileInput" accept="image/*" />
+    <canvas id="canvasOutput"></canvas>
 
     <script>
-        // Crear la aplicación Pixi.js
-        const app = new PIXI.Application({
-            width: 800,
-            height: 600,
-            backgroundColor: 0xffffff,
-        });
+        // Esperar a que OpenCV.js esté listo
+        function onOpenCvReady() {
+            document.getElementById('fileInput').addEventListener('change', (event) => {
+                const file = event.target.files[0];
+                if (!file) {
+                    alert("Por favor selecciona una imagen.");
+                    return;
+                }
 
-        // Obtener el contenedor donde se añadirá el canvas
-        const appContainer = document.getElementById("app");
-        if (appContainer) {
-            appContainer.appendChild(app.view);
-        } else {
-            console.error("No se pudo encontrar el contenedor con id 'app'.");
+                const imgElement = new Image();
+                imgElement.onload = () => processImage(imgElement);
+                imgElement.src = URL.createObjectURL(file);
+            });
         }
 
-        // Manejar la subida de una imagen
-        const uploadInput = document.getElementById("upload");
-        uploadInput.addEventListener("change", function (event) {
-            const file = event.target.files[0];
-            if (!file) {
-                alert("Por favor, selecciona un archivo de imagen válido.");
-                return;
+        function processImage(image) {
+            // Crear matriz OpenCV desde la imagen
+            let src = cv.imread(image);
+            let gray = new cv.Mat();
+            let binary = new cv.Mat();
+
+            // Convertir a escala de grises
+            cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY, 0);
+
+            // Aplicar un umbral binario inverso para detectar áreas oscuras
+            // Ajustar el valor 50 según las necesidades para definir "oscuro"
+            cv.threshold(gray, binary, 50, 255, cv.THRESH_BINARY_INV);
+
+            // Mostrar el resultado en el canvas
+            let rgba = new cv.Mat();
+            cv.cvtColor(binary, rgba, cv.COLOR_GRAY2RGBA, 0);
+
+            // Eliminar colores no negros (hacer transparente lo demás)
+            for (let i = 0; i < rgba.rows; i++) {
+                for (let j = 0; j < rgba.cols; j++) {
+                    let pixel = rgba.ucharPtr(i, j);
+                    if (pixel[0] === 0 && pixel[1] === 0 && pixel[2] === 0) {
+                        // Mantener negro
+                        pixel[3] = 255; // Alpha a opaco
+                    } else {
+                        // Hacer transparente
+                        pixel[3] = 0;
+                    }
+                }
             }
 
-            const imgURL = URL.createObjectURL(file);
-            processImage(imgURL);
-        });
+            // Mostrar la imagen procesada en el canvas
+            cv.imshow('canvasOutput', rgba);
 
-        function processImage(imageURL) {
-            try {
-                // Limpiar el escenario antes de agregar nuevos elementos
-                app.stage.removeChildren();
-
-                // Cargar la textura de la imagen
-                const texture = PIXI.Texture.from(imageURL);
-
-                texture.baseTexture.on('loaded', () => {
-                    const sprite = new PIXI.Sprite(texture);
-
-                    // Configurar el sprite
-                    sprite.x = 0;
-                    sprite.y = 0;
-                    sprite.width = app.renderer.width;
-                    sprite.height = app.renderer.height;
-
-                    // Agregar sprite al escenario
-                    app.stage.addChild(sprite);
-
-                    // Crear un filtro para detectar letras negras
-                    const blackFilter = new PIXI.Filter(null, `
-                        precision mediump float;
-                        varying vec2 vTextureCoord;
-                        uniform sampler2D uSampler;
-
-                        void main() {
-                            vec4 color = texture2D(uSampler, vTextureCoord);
-                            float luminance = (color.r + color.g + color.b) / 3.0;
-
-                            // Detectar píxeles oscuros (negros)
-                            if (luminance < 0.2) {
-                                gl_FragColor = color; // Mantener negro
-                            } else {
-                                gl_FragColor = vec4(1.0, 1.0, 1.0, 0.0); // Transparente
-                            }
-                        }
-                    `);
-
-                    // Aplicar el filtro
-                    sprite.filters = [blackFilter];
-                    console.log("Imagen procesada correctamente.");
-                });
-
-            } catch (error) {
-                alert("Error al procesar la imagen: " + error.message);
-                console.error(error);
-            }
+            // Liberar recursos
+            src.delete();
+            gray.delete();
+            binary.delete();
+            rgba.delete();
         }
     </script>
 </body>
