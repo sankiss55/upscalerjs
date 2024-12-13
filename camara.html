@@ -38,24 +38,31 @@
             let gray = new cv.Mat();
             let binary = new cv.Mat();
 
-            // Convertir a escala de grises
+            // Convertir la imagen a escala de grises
             cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY, 0);
 
-            // Umbral binario inverso para texto oscuro
+            // Umbral binario inverso para texto oscuro (letras negras sobre fondo blanco)
             cv.threshold(gray, binary, 50, 255, cv.THRESH_BINARY_INV);
 
-            // Mostrar resultado en canvas
+            // Mostrar el resultado en un canvas
             let canvas = document.getElementById('canvasOutput');
             canvas.width = image.width;
             canvas.height = image.height;
             cv.imshow(canvas, binary);
 
-            // Liberar recursos
+            // Liberar los recursos de OpenCV
             src.delete();
             gray.delete();
             binary.delete();
 
             console.log("Imagen procesada correctamente.");
+        }
+
+        // Verifica si OpenCV.js está cargado
+        if (cv.getBuildInformation()) {
+            onOpenCvReady();
+        } else {
+            document.addEventListener('opencv.js', onOpenCvReady);
         }
     </script>
 </body>
