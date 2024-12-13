@@ -19,7 +19,7 @@
             backgroundColor: 0xffffff,
         });
 
-        // Asegurarse de que el canvas sea añadido al DOM
+        // Obtener el contenedor donde se añadirá el canvas
         const appContainer = document.getElementById("app");
         if (appContainer) {
             appContainer.appendChild(app.view);
@@ -29,7 +29,7 @@
 
         // Manejar la subida de una imagen
         const uploadInput = document.getElementById("upload");
-        uploadInput.addEventListener("change", function(event) {
+        uploadInput.addEventListener("change", function (event) {
             const file = event.target.files[0];
             if (!file) {
                 alert("Por favor, selecciona un archivo de imagen válido.");
@@ -47,40 +47,43 @@
 
                 // Cargar la textura de la imagen
                 const texture = PIXI.Texture.from(imageURL);
-                const sprite = new PIXI.Sprite(texture);
 
-                // Configurar el sprite
-                sprite.x = 0;
-                sprite.y = 0;
-                sprite.width = app.renderer.width;
-                sprite.height = app.renderer.height;
+                texture.baseTexture.on('loaded', () => {
+                    const sprite = new PIXI.Sprite(texture);
 
-                // Agregar sprite al escenario
-                app.stage.addChild(sprite);
+                    // Configurar el sprite
+                    sprite.x = 0;
+                    sprite.y = 0;
+                    sprite.width = app.renderer.width;
+                    sprite.height = app.renderer.height;
 
-                // Crear un filtro para detectar letras negras
-                const blackFilter = new PIXI.Filter(null, `
-                    precision mediump float;
-                    varying vec2 vTextureCoord;
-                    uniform sampler2D uSampler;
+                    // Agregar sprite al escenario
+                    app.stage.addChild(sprite);
 
-                    void main() {
-                        vec4 color = texture2D(uSampler, vTextureCoord);
-                        float luminance = (color.r + color.g + color.b) / 3.0;
+                    // Crear un filtro para detectar letras negras
+                    const blackFilter = new PIXI.Filter(null, `
+                        precision mediump float;
+                        varying vec2 vTextureCoord;
+                        uniform sampler2D uSampler;
 
-                        // Detectar píxeles oscuros (negros)
-                        if (luminance < 0.2) {
-                            gl_FragColor = color; // Mantener negro
-                        } else {
-                            gl_FragColor = vec4(1.0, 1.0, 1.0, 0.0); // Transparente
+                        void main() {
+                            vec4 color = texture2D(uSampler, vTextureCoord);
+                            float luminance = (color.r + color.g + color.b) / 3.0;
+
+                            // Detectar píxeles oscuros (negros)
+                            if (luminance < 0.2) {
+                                gl_FragColor = color; // Mantener negro
+                            } else {
+                                gl_FragColor = vec4(1.0, 1.0, 1.0, 0.0); // Transparente
+                            }
                         }
-                    }
-                `);
+                    `);
 
-                // Aplicar el filtro
-                sprite.filters = [blackFilter];
+                    // Aplicar el filtro
+                    sprite.filters = [blackFilter];
+                    console.log("Imagen procesada correctamente.");
+                });
 
-                console.log("Imagen procesada correctamente.");
             } catch (error) {
                 alert("Error al procesar la imagen: " + error.message);
                 console.error(error);
