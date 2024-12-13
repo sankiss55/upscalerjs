@@ -8,27 +8,32 @@
 </head>
 <body>
     <h1>Detectar y Dejar Solo Letras Negras</h1>
+    <p id="status">Cargando OpenCV.js...</p>
     <input type="file" id="fileInput" accept="image/*" />
     <canvas id="canvasOutput"></canvas>
 
     <script>
-        // Esperar a que OpenCV.js esté listo
+        // Cambiar el estado cuando OpenCV está listo
         function onOpenCvReady() {
-            document.getElementById('fileInput').addEventListener('change', (event) => {
-                const file = event.target.files[0];
-                if (!file) {
-                    alert("Por favor selecciona una imagen.");
-                    return;
-                }
-
-                const imgElement = new Image();
-                imgElement.onload = () => processImage(imgElement);
-                imgElement.src = URL.createObjectURL(file);
-            });
+            document.getElementById('status').innerText = 'OpenCV.js está listo.';
+            document.getElementById('fileInput').addEventListener('change', handleFileInput);
         }
 
+        // Manejar la entrada del archivo
+        function handleFileInput(event) {
+            const file = event.target.files[0];
+            if (!file) {
+                alert("Por favor selecciona una imagen.");
+                return;
+            }
+
+            const imgElement = new Image();
+            imgElement.onload = () => processImage(imgElement);
+            imgElement.src = URL.createObjectURL(file);
+        }
+
+        // Procesar la imagen
         function processImage(image) {
-            // Crear matriz OpenCV desde la imagen
             let src = cv.imread(image);
             let gray = new cv.Mat();
             let binary = new cv.Mat();
@@ -36,36 +41,21 @@
             // Convertir a escala de grises
             cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY, 0);
 
-            // Aplicar un umbral binario inverso para detectar áreas oscuras
-            // Ajustar el valor 50 según las necesidades para definir "oscuro"
+            // Umbral binario inverso para texto oscuro
             cv.threshold(gray, binary, 50, 255, cv.THRESH_BINARY_INV);
 
-            // Mostrar el resultado en el canvas
-            let rgba = new cv.Mat();
-            cv.cvtColor(binary, rgba, cv.COLOR_GRAY2RGBA, 0);
-
-            // Eliminar colores no negros (hacer transparente lo demás)
-            for (let i = 0; i < rgba.rows; i++) {
-                for (let j = 0; j < rgba.cols; j++) {
-                    let pixel = rgba.ucharPtr(i, j);
-                    if (pixel[0] === 0 && pixel[1] === 0 && pixel[2] === 0) {
-                        // Mantener negro
-                        pixel[3] = 255; // Alpha a opaco
-                    } else {
-                        // Hacer transparente
-                        pixel[3] = 0;
-                    }
-                }
-            }
-
-            // Mostrar la imagen procesada en el canvas
-            cv.imshow('canvasOutput', rgba);
+            // Mostrar resultado en canvas
+            let canvas = document.getElementById('canvasOutput');
+            canvas.width = image.width;
+            canvas.height = image.height;
+            cv.imshow(canvas, binary);
 
             // Liberar recursos
             src.delete();
             gray.delete();
             binary.delete();
-            rgba.delete();
+
+            console.log("Imagen procesada correctamente.");
         }
     </script>
 </body>
